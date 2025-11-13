@@ -25,7 +25,10 @@ type SearchRequest struct {
 
 // Search performs semantic search
 func (h *SearchHandler) Search(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
 
 	var req SearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -39,8 +42,26 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		return
 	}
 
+	// Set default TopK if not provided
 	if req.TopK == 0 {
 		req.TopK = 10
+	}
+
+	// Validate TopK bounds (1-100) to prevent DoS attacks
+	if req.TopK < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "top_k must be at least 1",
+			"provided": req.TopK,
+		})
+		return
+	}
+	if req.TopK > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "top_k cannot exceed 100",
+			"provided": req.TopK,
+			"maximum": 100,
+		})
+		return
 	}
 
 	results, err := h.searchService.Search(profileID, indexID, req.Query, req.TopK)

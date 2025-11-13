@@ -25,7 +25,11 @@ func NewChatHandler(chatService *services.ChatService, db *gorm.DB) *ChatHandler
 
 // SendMessage handles chat message
 func (h *ChatHandler) SendMessage(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	var req services.ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,7 +48,11 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 
 // CreateConfiguration creates a chat configuration
 func (h *ChatHandler) CreateConfiguration(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	var config models.ChatConfiguration
 	if err := c.ShouldBindJSON(&config); err != nil {
@@ -63,7 +71,11 @@ func (h *ChatHandler) CreateConfiguration(c *gin.Context) {
 
 // ListConfigurations lists all configurations
 func (h *ChatHandler) ListConfigurations(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	var configs []models.ChatConfiguration
 	if err := h.db.Where("profile_id = ?", profileID).Find(&configs).Error; err != nil {
@@ -76,7 +88,11 @@ func (h *ChatHandler) ListConfigurations(c *gin.Context) {
 
 // GetConversation retrieves a conversation with messages
 func (h *ChatHandler) GetConversation(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	convID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
@@ -94,7 +110,11 @@ func (h *ChatHandler) GetConversation(c *gin.Context) {
 
 // ListConversations lists all conversations
 func (h *ChatHandler) ListConversations(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	convs, err := h.chatService.ListConversations(profileID)
 	if err != nil {
@@ -107,7 +127,11 @@ func (h *ChatHandler) ListConversations(c *gin.Context) {
 
 // SaveConversation marks a conversation as saved
 func (h *ChatHandler) SaveConversation(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	convID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
@@ -124,7 +148,11 @@ func (h *ChatHandler) SaveConversation(c *gin.Context) {
 
 // DeleteConversation deletes a conversation
 func (h *ChatHandler) DeleteConversation(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	convID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})

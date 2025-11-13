@@ -31,7 +31,10 @@ type DocumentResponse struct {
 
 // UploadDocument handles document upload
 func (h *DocumentHandler) UploadDocument(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
 
 	// Get index_id from form
 	indexIDStr := c.PostForm("index_id")
@@ -50,6 +53,23 @@ func (h *DocumentHandler) UploadDocument(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+
+	// Validate file size (max 100MB)
+	const maxFileSize = 100 * 1024 * 1024 // 100MB
+	if file.Size > maxFileSize {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "File size exceeds maximum allowed size of 100MB",
+			"max_size_mb": 100,
+			"file_size_mb": float64(file.Size) / (1024 * 1024),
+		})
+		return
+	}
+
+	// Validate file size is not zero
+	if file.Size == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File cannot be empty"})
 		return
 	}
 
@@ -80,7 +100,10 @@ func (h *DocumentHandler) UploadDocument(c *gin.Context) {
 
 // ListDocuments lists all documents for the user
 func (h *DocumentHandler) ListDocuments(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
 
 	docs, err := h.documentService.ListDocuments(profileID)
 	if err != nil {
@@ -98,7 +121,11 @@ func (h *DocumentHandler) ListDocuments(c *gin.Context) {
 
 // GetDocument retrieves a single document
 func (h *DocumentHandler) GetDocument(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	docID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document ID"})
@@ -116,7 +143,11 @@ func (h *DocumentHandler) GetDocument(c *gin.Context) {
 
 // DeleteDocument deletes a document
 func (h *DocumentHandler) DeleteDocument(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	docID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document ID"})

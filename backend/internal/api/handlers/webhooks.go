@@ -25,7 +25,11 @@ type CreateWebhookRequest struct {
 
 // CreateWebhook creates a new webhook
 func (h *WebhookHandler) CreateWebhook(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	var req CreateWebhookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,7 +48,11 @@ func (h *WebhookHandler) CreateWebhook(c *gin.Context) {
 
 // ListWebhooks lists all webhooks for the user
 func (h *WebhookHandler) ListWebhooks(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	webhooks, err := h.webhookService.ListWebhooks(profileID)
 	if err != nil {
@@ -57,7 +65,11 @@ func (h *WebhookHandler) ListWebhooks(c *gin.Context) {
 
 // DeleteWebhook deletes a webhook
 func (h *WebhookHandler) DeleteWebhook(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	webhookID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid webhook ID"})

@@ -19,7 +19,11 @@ func NewAnalyticsHandler(analyticsService *services.AnalyticsService) *Analytics
 
 // GetDashboardStats returns overview statistics
 func (h *AnalyticsHandler) GetDashboardStats(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	stats, err := h.analyticsService.GetDashboardStats(profileID)
 	if err != nil {
@@ -32,7 +36,11 @@ func (h *AnalyticsHandler) GetDashboardStats(c *gin.Context) {
 
 // GetUsageHistory returns usage metrics for a date range
 func (h *AnalyticsHandler) GetUsageHistory(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 
 	// Parse date parameters
 	startDateStr := c.DefaultQuery("start_date", time.Now().AddDate(0, 0, -30).Format("2006-01-02"))

@@ -30,7 +30,7 @@ func (s *ValidationService) ValidateOpenAIKey(apiKey string) (bool, string, erro
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, "Failed to connect to OpenAI API", err
@@ -69,7 +69,7 @@ func (s *ValidationService) ValidatePineconeKey(apiKey, environment string) (boo
 
 	req.Header.Set("Api-Key", apiKey)
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, "Failed to connect to Pinecone API", err
@@ -100,7 +100,7 @@ func (s *ValidationService) ValidateSlackToken(token string) (bool, string, erro
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, "Failed to connect to Slack API", err
@@ -144,7 +144,7 @@ func (s *ValidationService) TestEmbeddingAPI(apiKey string) (bool, string, error
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, "Failed to test embedding API", err
