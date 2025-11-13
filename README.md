@@ -43,14 +43,32 @@ A comprehensive multi-tenant RAG (Retrieval-Augmented Generation) Dashboard that
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### Option 1: Docker Compose (Recommended)
 
 ```bash
+# Clone repository
 git clone https://github.com/michlo23/RaguDashu.git
 cd RaguDashu
+
+# Create .env file
+cp backend/.env.example .env
+# Edit .env with your secrets (see below)
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Access the application
+# Frontend: http://localhost:5173
+# Backend: http://localhost:8080
+# PostgreSQL: localhost:5432
 ```
 
-### 2. Setup Database
+### Option 2: Manual Setup
+
+#### 1. Setup Database
 
 ```bash
 # Create PostgreSQL database
@@ -60,9 +78,13 @@ createdb ragdb
 psql -U postgres
 CREATE DATABASE ragdb;
 \q
+
+# Run migrations
+cd backend
+./scripts/run-migrations.sh
 ```
 
-### 3. Backend Setup
+#### 2. Backend Setup
 
 ```bash
 cd backend
@@ -70,23 +92,29 @@ cd backend
 # Copy environment file
 cp .env.example .env
 
-# Edit .env and configure:
-# - DATABASE_URL (your PostgreSQL connection string)
-# - JWT_SECRET (min 32 characters)
-# - ENCRYPTION_KEY (exactly 32 characters for AES-256)
+# Generate secrets
+# JWT_SECRET (32+ characters)
+openssl rand -base64 32
+
+# ENCRYPTION_KEY (exactly 32 bytes)
+openssl rand -base64 32 | cut -c1-32
+
+# Edit .env with your values
 vim .env
 
 # Install dependencies
 go mod download
 
-# Run database migrations (automatic on startup)
+# Run tests
+go test ./...
+
 # Run the server
 go run cmd/server/main.go
 ```
 
 The backend will start on `http://localhost:8080`
 
-### 4. Frontend Setup
+#### 3. Frontend Setup
 
 ```bash
 cd ../frontend
@@ -97,7 +125,7 @@ npm install
 # Copy environment file
 cp .env.example .env
 
-# Edit .env if needed (default API URL is correct)
+# Edit .env if needed
 vim .env
 
 # Start development server
@@ -105,6 +133,23 @@ npm run dev
 ```
 
 The frontend will start on `http://localhost:5173`
+
+### Option 3: Deploy to Railway
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed Railway deployment instructions.
+
+**Quick Railway Deploy:**
+
+1. Create Railway account at https://railway.app
+2. Install Railway CLI: `npm i -g @railway/cli`
+3. Login: `railway login`
+4. Initialize: `railway init`
+5. Add PostgreSQL: Click "New" → "Database" → "PostgreSQL"
+6. Deploy backend: Click "New" → "GitHub Repo" → Select repo → Set root to `/backend`
+7. Add environment variables (see [DEPLOYMENT.md](DEPLOYMENT.md#railway-deployment))
+8. Deploy frontend: Repeat for frontend with root `/frontend`
+
+Done! Railway handles builds, deployments, and HTTPS automatically.
 
 ## 📝 Environment Variables
 
@@ -280,6 +325,31 @@ The system includes a cleanup service that runs every 24 hours to:
 - Free up database space
 - Maintain system performance
 
+## 🧪 Testing
+
+### Run All Tests
+
+```bash
+# Backend tests
+cd backend
+go test ./...
+
+# With coverage
+go test -cover ./...
+
+# With verbose output
+go test -v ./...
+```
+
+### Test Coverage
+
+- ✅ Encryption/Decryption (AES-256-GCM)
+- ✅ Text chunking and token estimation
+- ✅ Authentication (register, login)
+- ✅ API handlers (integration tests)
+
+See [TESTING.md](TESTING.md) for comprehensive testing guide.
+
 ## 🛠️ Development
 
 ### Backend Development
@@ -293,6 +363,9 @@ air
 
 # Run tests
 go test ./...
+
+# Run tests with race detection
+go test -race ./...
 
 # Build for production
 go build -o server cmd/server/main.go
@@ -311,6 +384,20 @@ npm run build
 
 # Preview production build
 npm run preview
+```
+
+### Database Migrations
+
+```bash
+# Run migrations
+cd backend
+./scripts/run-migrations.sh
+
+# Create new migration
+# Edit migrations/002_new_feature.sql
+
+# Rollback
+psql $DATABASE_URL -f migrations/001_initial_schema.down.sql
 ```
 
 ## 🔧 Troubleshooting
@@ -366,6 +453,14 @@ npm install
 7. **Regular security audits**
 8. **Backup database** regularly
 
+## 📚 Documentation
+
+- [README.md](README.md) - Main documentation (this file)
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide for Railway, Docker, and manual setups
+- [TESTING.md](TESTING.md) - Testing guide with examples and best practices
+- [backend/.env.example](backend/.env.example) - Backend environment variables
+- [frontend/.env.example](frontend/.env.example) - Frontend environment variables
+
 ## 📄 License
 
 This project is private and proprietary.
@@ -374,50 +469,43 @@ This project is private and proprietary.
 
 For issues and questions:
 - Check existing issues on GitHub
+- Review [DEPLOYMENT.md](DEPLOYMENT.md) for deployment issues
+- Review [TESTING.md](TESTING.md) for testing help
 - Create a new issue with detailed reproduction steps
 - Include relevant logs and error messages
 
 ## 🚀 Deployment
 
-### Backend Deployment
+### Railway (Recommended)
+
+Complete Railway deployment guide: [DEPLOYMENT.md#railway-deployment](DEPLOYMENT.md#railway-deployment)
+
+Quick steps:
+1. Add PostgreSQL database in Railway
+2. Deploy backend from GitHub (root: `/backend`)
+3. Add environment variables
+4. Run migrations
+5. Deploy frontend (root: `/frontend`)
+
+### Docker
 
 ```bash
-# Build binary
-cd backend
-go build -o server cmd/server/main.go
+# Development
+docker-compose up -d
 
-# Run with production config
-ENV=production ./server
+# Production
+docker-compose -f docker-compose.prod.yml up -d
+
+# Build images
+docker build -t rag-backend:latest ./backend
+docker build -t rag-frontend:latest ./frontend
 ```
 
-### Frontend Deployment
+See [DEPLOYMENT.md#docker-deployment](DEPLOYMENT.md#docker-deployment) for details.
 
-```bash
-# Build for production
-cd frontend
-npm run build
+### Manual Deployment
 
-# Deploy dist/ folder to your hosting provider
-# (Vercel, Netlify, AWS S3 + CloudFront, etc.)
-```
-
-### Docker Deployment (Optional)
-
-```bash
-# Backend Dockerfile
-FROM golang:1.23-alpine
-WORKDIR /app
-COPY . .
-RUN go build -o server cmd/server/main.go
-CMD ["./server"]
-
-# Frontend Dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY . .
-RUN npm install && npm run build
-# Serve with nginx or node server
-```
+See [DEPLOYMENT.md#manual-deployment](DEPLOYMENT.md#manual-deployment) for VPS/dedicated server deployment.
 
 ## 💡 Tips
 

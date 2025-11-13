@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rag-postgres
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB: ragdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser -d ragdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag-backend
+    environment:
+      PORT: 8080
+      ENV: development
+      FRONTEND_URL: http://localhost:5173
+      DATABASE_URL: postgresql://raguser:ragpass@postgres:5432/ragdb?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-development-secret-key-change-in-production-12345678}
+      JWT_ACCESS_EXPIRE_MINUTES: 60
+      JWT_REFRESH_EXPIRE_DAYS: 30
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-12345678901234567890123456789012}
+      CLEANUP_INTERVAL_HOURS: 24
+      CHAT_RETENTION_DAYS: 60
+      RATE_LIMIT_REQUESTS: 100
+      RATE_LIMIT_WINDOW_MINUTES: 15
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: rag-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api
+      VITE_APP_NAME: RAG Dashboard
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    command: npm run dev
+
+volumes:
+  postgres_data:
