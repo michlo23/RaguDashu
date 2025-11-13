@@ -54,11 +54,22 @@ func main() {
 	embeddingService := services.NewEmbeddingService()
 	pineconeService := services.NewPineconeService()
 
+	// Initialize new services
+	pdfService := services.NewPDFService()
+	analyticsService := services.NewAnalyticsService(db)
+	validationService := services.NewValidationService()
+	auditService := services.NewAuditService(db)
+	webhookService := services.NewWebhookService(db)
+	cacheService := services.NewCacheService(cfg.RedisURL)
+
 	documentService := services.NewDocumentService(
 		db,
 		embeddingService,
 		pineconeService,
 		credentialService,
+		pdfService,
+		analyticsService,
+		webhookService,
 	)
 
 	searchService := services.NewSearchService(
@@ -93,6 +104,11 @@ func main() {
 		documentService,
 		searchService,
 		chatService,
+		analyticsService,
+		webhookService,
+		validationService,
+		auditService,
+		cacheService,
 	)
 
 	// Create HTTP server

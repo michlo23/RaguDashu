@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -19,6 +20,13 @@ type Document struct {
 	ChunkCount   int            `gorm:"default:0"`
 	UploadStatus string         `gorm:"size:50;default:'processing'"` // 'processing', 'completed', 'failed'
 	ErrorMessage *string        `gorm:"type:text"`
+
+	// Enhanced metadata fields
+	Tags       pq.StringArray `gorm:"type:text[]"`
+	FolderID   *uuid.UUID     `gorm:"type:uuid"`
+	IsFavorite bool           `gorm:"default:false"`
+	Metadata   datatypes.JSON `gorm:"type:jsonb"`
+
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 
@@ -26,6 +34,7 @@ type Document struct {
 	Profile *UserProfile    `gorm:"foreignKey:ProfileID"`
 	Index   *PineconeIndex  `gorm:"foreignKey:IndexID"`
 	Chunks  []DocumentChunk `gorm:"foreignKey:DocumentID"`
+	Folder  *DocumentFolder `gorm:"foreignKey:FolderID"`
 }
 
 // BeforeCreate hook

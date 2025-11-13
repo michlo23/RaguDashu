@@ -19,6 +19,11 @@ func SetupRoutes(
 	documentService *services.DocumentService,
 	searchService *services.SearchService,
 	chatService *services.ChatService,
+	analyticsService *services.AnalyticsService,
+	webhookService *services.WebhookService,
+	validationService *services.ValidationService,
+	auditService *services.AuditService,
+	cacheService *services.CacheService,
 ) {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -27,6 +32,8 @@ func SetupRoutes(
 	searchHandler := handlers.NewSearchHandler(searchService)
 	chatHandler := handlers.NewChatHandler(chatService, db)
 	systemHandler := handlers.NewSystemHandler(db)
+	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService)
+	webhookHandler := handlers.NewWebhookHandler(webhookService)
 
 	// Apply middlewares
 	router.Use(middleware.CORSMiddleware(cfg.FrontendURL))
@@ -93,6 +100,21 @@ func SetupRoutes(
 			chat.GET("/conversations/:id", chatHandler.GetConversation)
 			chat.POST("/conversations/:id/save", chatHandler.SaveConversation)
 			chat.DELETE("/conversations/:id", chatHandler.DeleteConversation)
+		}
+
+		// Analytics
+		analytics := protected.Group("/analytics")
+		{
+			analytics.GET("/dashboard", analyticsHandler.GetDashboardStats)
+			analytics.GET("/usage-history", analyticsHandler.GetUsageHistory)
+		}
+
+		// Webhooks
+		webhooks := protected.Group("/webhooks")
+		{
+			webhooks.POST("", webhookHandler.CreateWebhook)
+			webhooks.GET("", webhookHandler.ListWebhooks)
+			webhooks.DELETE("/:id", webhookHandler.DeleteWebhook)
 		}
 	}
 }

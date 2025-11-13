@@ -17,6 +17,9 @@ type Config struct {
 	// Database
 	DatabaseURL string
 
+	// Redis (optional)
+	RedisURL string
+
 	// JWT
 	JWTSecret            string
 	JWTAccessExpireMin   int
@@ -48,6 +51,7 @@ func Load() (*Config, error) {
 		Environment:            getEnv("ENV", "development"),
 		FrontendURL:            getEnv("FRONTEND_URL", "http://localhost:5173"),
 		DatabaseURL:            getEnv("DATABASE_URL", ""),
+		RedisURL:               getEnv("REDIS_URL", ""),
 		JWTSecret:              getEnv("JWT_SECRET", ""),
 		JWTAccessExpireMin:     getEnvAsInt("JWT_ACCESS_EXPIRE_MINUTES", 60),
 		JWTRefreshExpireDays:   getEnvAsInt("JWT_REFRESH_EXPIRE_DAYS", 30),

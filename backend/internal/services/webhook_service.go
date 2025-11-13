@@ -91,9 +91,7 @@ func (s *WebhookService) generateSignature(payload []byte, secret string) string
 
 // CreateWebhook creates a new webhook
 func (s *WebhookService) CreateWebhook(profileID uuid.UUID, name, url string, events []string) (*models.Webhook, error) {
-	// Generate secret
-	secretBytes := make([]byte, 32)
-	// Use timestamp as simple secret for now
+	// Generate secret using timestamp (simple approach)
 	secret := fmt.Sprintf("%d", time.Now().UnixNano())
 
 	webhook := &models.Webhook{
