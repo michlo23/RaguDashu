@@ -3,11 +3,14 @@ package services
 import (
 	"bytes"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,11 +21,15 @@ import (
 // WebhookService handles webhook delivery
 type WebhookService struct {
 	db *gorm.DB
+	wg *sync.WaitGroup
 }
 
 // NewWebhookService creates a new webhook service
 func NewWebhookService(db *gorm.DB) *WebhookService {
-	return &WebhookService{db: db}
+	return &WebhookService{
+		db: db,
+		wg: &sync.WaitGroup{},
+	}
 }
 
 // WebhookPayload represents a webhook payload
@@ -40,14 +47,17 @@ func (s *WebhookService) Trigger(profileID uuid.UUID, event string, data map[str
 	s.db.Where("profile_id = ? AND is_active = ? AND ? = ANY(events)", profileID, true, event).
 		Find(&webhooks)
 
-	// Send webhooks asynchronously
+	// Send webhooks asynchronously with proper tracking
 	for _, webhook := range webhooks {
+		s.wg.Add(1)
 		go s.sendWebhook(webhook, event, profileID, data)
 	}
 }
 
 // sendWebhook sends a single webhook
 func (s *WebhookService) sendWebhook(webhook models.Webhook, event string, profileID uuid.UUID, data map[string]interface{}) {
+	defer s.wg.Done()
+
 	payload := WebhookPayload{
 		Event:     event,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -91,8 +101,12 @@ func (s *WebhookService) generateSignature(payload []byte, secret string) string
 
 // CreateWebhook creates a new webhook
 func (s *WebhookService) CreateWebhook(profileID uuid.UUID, name, url string, events []string) (*models.Webhook, error) {
-	// Generate secret using timestamp (simple approach)
-	secret := fmt.Sprintf("%d", time.Now().UnixNano())
+	// Generate secure random secret (32 bytes = 256 bits)
+	secretBytes := make([]byte, 32)
+	if _, err := rand.Read(secretBytes); err != nil {
+		return nil, fmt.Errorf("failed to generate webhook secret: %w", err)
+	}
+	secret := base64.URLEncoding.EncodeToString(secretBytes)
 
 	webhook := &models.Webhook{
 		ProfileID: profileID,

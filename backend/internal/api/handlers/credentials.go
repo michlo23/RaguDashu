@@ -34,7 +34,10 @@ type CredentialResponse struct {
 
 // CreateCredential creates or updates a credential
 func (h *CredentialHandler) CreateCredential(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
 
 	var req CreateCredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -53,7 +56,10 @@ func (h *CredentialHandler) CreateCredential(c *gin.Context) {
 
 // ListCredentials lists all credentials for the user
 func (h *CredentialHandler) ListCredentials(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
 
 	credentials, err := h.credentialService.ListCredentials(profileID)
 	if err != nil {
@@ -71,7 +77,11 @@ func (h *CredentialHandler) ListCredentials(c *gin.Context) {
 
 // DeleteCredential deletes a credential
 func (h *CredentialHandler) DeleteCredential(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	credentialID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential ID"})
@@ -88,7 +98,11 @@ func (h *CredentialHandler) DeleteCredential(c *gin.Context) {
 
 // TestCredential tests a credential's validity
 func (h *CredentialHandler) TestCredential(c *gin.Context) {
-	profileID, _ := middleware.GetProfileID(c)
+	profileID, ok := middleware.MustGetProfileID(c)
+	if !ok {
+		return
+	}
+
 	credentialID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credential ID"})

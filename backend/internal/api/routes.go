@@ -42,9 +42,8 @@ func SetupRoutes(
 	// Public routes
 	api := router.Group("/api")
 	{
-		// System
+		// System (public health check only)
 		api.GET("/health", systemHandler.Health)
-		api.GET("/status", systemHandler.Status)
 
 		// Auth
 		auth := api.Group("/auth")
@@ -59,6 +58,10 @@ func SetupRoutes(
 	protected := api.Group("")
 	protected.Use(middleware.AuthMiddleware(authService))
 	{
+		// System (protected endpoints)
+		protected.GET("/status", systemHandler.Status)
+		protected.GET("/admin/status", systemHandler.DetailedStatus)
+
 		// Auth
 		authGroup := protected.Group("/auth")
 		{

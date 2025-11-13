@@ -52,18 +52,55 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 func GetUserID(c *gin.Context) (uuid.UUID, error) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		return uuid.Nil, nil
+		return uuid.Nil, &AuthError{Message: "user ID not found in context"}
 	}
-	return userID.(uuid.UUID), nil
+	uid, ok := userID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, &AuthError{Message: "invalid user ID in context"}
+	}
+	return uid, nil
 }
 
 // GetProfileID extracts profile ID from context
 func GetProfileID(c *gin.Context) (uuid.UUID, error) {
 	profileID, exists := c.Get("profile_id")
 	if !exists {
-		return uuid.Nil, nil
+		return uuid.Nil, &AuthError{Message: "profile ID not found in context"}
 	}
-	return profileID.(uuid.UUID), nil
+	pid, ok := profileID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, &AuthError{Message: "invalid profile ID in context"}
+	}
+	return pid, nil
+}
+
+// AuthError represents an authentication/authorization error
+type AuthError struct {
+	Message string
+}
+
+func (e *AuthError) Error() string {
+	return e.Message
+}
+
+// MustGetProfileID extracts profile ID and returns 401 if not found
+func MustGetProfileID(c *gin.Context) (uuid.UUID, bool) {
+	profileID, err := GetProfileID(c)
+	if err != nil || profileID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing profile ID"})
+		return uuid.Nil, false
+	}
+	return profileID, true
+}
+
+// MustGetUserID extracts user ID and returns 401 if not found
+func MustGetUserID(c *gin.Context) (uuid.UUID, bool) {
+	userID, err := GetUserID(c)
+	if err != nil || userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing user ID"})
+		return uuid.Nil, false
+	}
+	return userID, true
 }
 
 // RequireAdmin middleware ensures user is an admin

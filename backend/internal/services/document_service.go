@@ -165,7 +165,7 @@ func (s *DocumentService) processDocument(docID, profileID uuid.UUID, text strin
 	// Generate embeddings
 	embeddings, err := s.embeddingService.GenerateBatchEmbeddings(chunks, openAIKey)
 	if err != nil {
-		errMsg := fmt.Sprintf("Failed to generate embeddings: %v", err)
+		errMsg := utils.GetGenericErrorMessage(err, "Embedding generation failed")
 		doc.ErrorMessage = &errMsg
 		doc.UploadStatus = models.DocumentStatusFailed
 		s.db.Save(&doc)
@@ -223,7 +223,7 @@ func (s *DocumentService) processDocument(docID, profileID uuid.UUID, text strin
 	// Upload to Pinecone (TODO: Use actual index host from config)
 	indexHost := fmt.Sprintf("%s.svc.pinecone.io", index.IndexName)
 	if err := s.pineconeService.UpsertVectors(indexHost, pineconeKey, profile.PineconeNamespace, vectors); err != nil {
-		errMsg := fmt.Sprintf("Failed to upload to Pinecone: %v", err)
+		errMsg := utils.GetGenericErrorMessage(err, "Vector upload failed")
 		doc.ErrorMessage = &errMsg
 		doc.UploadStatus = models.DocumentStatusFailed
 		s.db.Save(&doc)
