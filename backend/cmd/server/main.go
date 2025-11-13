@@ -85,6 +85,7 @@ func main() {
 		db,
 		searchService,
 		credentialService,
+		mcpService,
 	)
 
 	// Start cleanup service
