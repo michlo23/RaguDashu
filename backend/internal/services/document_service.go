@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -17,6 +18,9 @@ type DocumentService struct {
 	embeddingService  *EmbeddingService
 	pineconeService   *PineconeService
 	credentialService *CredentialService
+	pdfService        *PDFService
+	analyticsService  *AnalyticsService
+	webhookService    *WebhookService
 }
 
 // NewDocumentService creates a new document service
@@ -25,12 +29,18 @@ func NewDocumentService(
 	embeddingService *EmbeddingService,
 	pineconeService *PineconeService,
 	credentialService *CredentialService,
+	pdfService *PDFService,
+	analyticsService *AnalyticsService,
+	webhookService *WebhookService,
 ) *DocumentService {
 	return &DocumentService{
 		db:                db,
 		embeddingService:  embeddingService,
 		pineconeService:   pineconeService,
 		credentialService: credentialService,
+		pdfService:        pdfService,
+		analyticsService:  analyticsService,
+		webhookService:    webhookService,
 	}
 }
 
@@ -47,12 +57,40 @@ func (s *DocumentService) UploadDocument(
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	text := string(contentBytes)
+	var text string
+	var metadata map[string]interface{}
 
-	// TODO: Add PDF parsing for PDF files
-	// For now, assume text files only
+	// Extract text based on file type
+	if fileType == "application/pdf" || strings.HasSuffix(filename, ".pdf") {
+		// Extract text from PDF
+		if s.pdfService != nil {
+			text, err = s.pdfService.ExtractText(contentBytes)
+			if err != nil {
+				text = string(contentBytes) // Fallback to raw content
+			} else {
+				// Extract PDF metadata
+				if pdfMeta, err := s.pdfService.ExtractMetadata(contentBytes); err == nil {
+					metadata = make(map[string]interface{})
+					for k, v := range pdfMeta {
+						metadata[k] = v
+					}
+				}
+			}
+		} else {
+			text = string(contentBytes)
+		}
 
-	// Create document record
+	} else {
+		// Plain text file
+		text = string(contentBytes)
+	}
+
+	// Create document record with metadata
+	var metadataJSON []byte
+	if metadata != nil {
+		metadataJSON, _ = json.Marshal(metadata)
+	}
+
 	doc := &models.Document{
 		ProfileID:    profileID,
 		IndexID:      indexID,
@@ -60,10 +98,26 @@ func (s *DocumentService) UploadDocument(
 		FileType:     fileType,
 		FileSize:     fileSize,
 		UploadStatus: models.DocumentStatusProcessing,
+		Metadata:     metadataJSON,
 	}
 
 	if err := s.db.Create(doc).Error; err != nil {
 		return nil, fmt.Errorf("failed to create document: %w", err)
+	}
+
+	// Track analytics
+	if s.analyticsService != nil {
+		s.analyticsService.TrackDocumentUpload(profileID)
+	}
+
+	// Trigger webhook
+	if s.webhookService != nil {
+		webhookData := map[string]interface{}{
+			"document_id": doc.ID.String(),
+			"filename":    filename,
+			"file_size":   fileSize,
+		}
+		s.webhookService.Trigger(profileID, "document.uploaded", webhookData)
 	}
 
 	// Process asynchronously (in a real app, use a queue)
