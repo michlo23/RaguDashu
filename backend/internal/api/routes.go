@@ -24,6 +24,8 @@ func SetupRoutes(
 	validationService *services.ValidationService,
 	auditService *services.AuditService,
 	cacheService *services.CacheService,
+	mcpService *services.MCPService,
+	oauth2Service *services.OAuth2Service,
 ) {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -34,6 +36,7 @@ func SetupRoutes(
 	systemHandler := handlers.NewSystemHandler(db)
 	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService)
 	webhookHandler := handlers.NewWebhookHandler(webhookService)
+	mcpHandler := handlers.NewMCPHandler(mcpService, oauth2Service)
 
 	// Apply middlewares
 	router.Use(middleware.CORSMiddleware(cfg.FrontendURL))
@@ -119,5 +122,27 @@ func SetupRoutes(
 			webhooks.GET("", webhookHandler.ListWebhooks)
 			webhooks.DELETE("/:id", webhookHandler.DeleteWebhook)
 		}
+
+		// MCP (Model Context Protocol) Servers
+		mcp := protected.Group("/mcp")
+		{
+			// Server management
+			mcp.POST("/servers", mcpHandler.CreateMCPServer)
+			mcp.GET("/servers", mcpHandler.ListMCPServers)
+			mcp.GET("/servers/:id", mcpHandler.GetMCPServer)
+			mcp.PUT("/servers/:id", mcpHandler.UpdateMCPServer)
+			mcp.DELETE("/servers/:id", mcpHandler.DeleteMCPServer)
+
+			// Capabilities and tools
+			mcp.POST("/servers/:id/sync", mcpHandler.SyncCapabilities)
+			mcp.POST("/servers/:id/tools/call", mcpHandler.CallTool)
+
+			// OAuth 2 flow
+			mcp.POST("/servers/:id/oauth2/initiate", mcpHandler.InitiateOAuth2)
+			mcp.POST("/servers/:id/oauth2/refresh", mcpHandler.RefreshToken)
+		}
 	}
+
+	// Public OAuth 2 callback (doesn't require authentication)
+	api.GET("/mcp/oauth2/callback", mcpHandler.HandleOAuth2Callback)
 }

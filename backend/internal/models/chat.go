@@ -9,18 +9,19 @@ import (
 )
 
 type ChatConfiguration struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	ProfileID    uuid.UUID  `gorm:"type:uuid;not null"`
-	Name         string     `gorm:"size:255;not null"`
-	Model        string     `gorm:"size:100;not null"` // gpt-4, gpt-4-turbo-preview, etc.
-	IndexID      *uuid.UUID `gorm:"type:uuid"`         // NULL = no RAG
-	SystemPrompt string     `gorm:"type:text;not null"`
-	Temperature  float32    `gorm:"type:decimal(2,1);default:0.7"`
-	MaxTokens    int        `gorm:"default:1000"`
-	TopK         int        `gorm:"default:5"` // Context chunks to retrieve
-	IsDefault    bool       `gorm:"default:false"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ProfileID       uuid.UUID      `gorm:"type:uuid;not null"`
+	Name            string         `gorm:"size:255;not null"`
+	Model           string         `gorm:"size:100;not null"` // gpt-4, gpt-4-turbo-preview, etc.
+	IndexID         *uuid.UUID     `gorm:"type:uuid"`         // NULL = no RAG
+	SystemPrompt    string         `gorm:"type:text;not null"`
+	Temperature     float32        `gorm:"type:decimal(2,1);default:0.7"`
+	MaxTokens       int            `gorm:"default:1000"`
+	TopK            int            `gorm:"default:5"` // Context chunks to retrieve
+	EnabledMCPTools datatypes.JSON `gorm:"type:jsonb"` // Array of MCP server IDs to enable for this config
+	IsDefault       bool           `gorm:"default:false"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 
 	// Relations
 	Profile *UserProfile   `gorm:"foreignKey:ProfileID"`

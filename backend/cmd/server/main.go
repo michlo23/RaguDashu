@@ -61,6 +61,8 @@ func main() {
 	auditService := services.NewAuditService(db)
 	webhookService := services.NewWebhookService(db)
 	cacheService := services.NewCacheService(cfg.RedisURL)
+	oauth2Service := services.NewOAuth2Service(db, encryptionService)
+	mcpService := services.NewMCPService(db, oauth2Service, encryptionService)
 
 	documentService := services.NewDocumentService(
 		db,
@@ -109,6 +111,8 @@ func main() {
 		validationService,
 		auditService,
 		cacheService,
+		mcpService,
+		oauth2Service,
 	)
 
 	// Create HTTP server
